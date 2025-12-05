@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# --- 설정 ---
+CONTAINER_NAME="arch-dpm"             # Distrobox 컨테이너 이름
+BACKUP_REPO="${CONTAINER_NAME}-backup" # 백업 이미지가 저장될 레포지토리 이름
+MAX_BACKUPS=5                         # 유지할 최대 백업 개수
+
+action=$1
+package=$2
+
+CMD=""
+LOG_MSG=""
+
+# 백업 정리 함수 (Rotation Logic)
+cleanup_old_backups() {
+    echo "🔍 Checking for old snapshots..."
+    
+    # 1. 해당 레포지토리의 이미지들을 생성 최신순으로 나열
+    # 2. tail -n +$((MAX_BACKUPS + 1)) : 상위 N개를 건너뛰고 그 이후(오래된 것들)만 출력
+    # 3. xargs -r podman image rm : 출력된 오래된 이미지들을 삭제 (목록이 없으면 실행 안 함)
+    
+    podman images --sort created --format "{{.Repository}}:{{.Tag}}" \
+    | grep "^${BACKUP_REPO}:" \
+    | tail -n +$((MAX_BACKUPS + 1)) \
+    | xargs -r podman image rm
+    
+    # 삭제 작업 후 결과 메시지 (선택 사항)
+    # 삭제된 이미지가 없다면 위 명령어가 조용히 넘어갑니다.
+}
+
+if [ "$action" == "init" ]; then
+    echo "🛠 Initializing dpm environment..."
+    
+    # 1. 아치 리눅스 컨테이너 생성
+    distrobox-create --name arch-dev --image archlinux:latest --yes
+    
+    # 2. 필수 패키지 설치 (git, base-devel, yay 설치를 위한 준비)
+    echo "📦 Setting up AUR helper (yay)..."
+    distrobox-enter arch-dev -- sudo pacman -Syu --noconfirm base-devel git
+    
+    # 3. yay 설치 (컨테이너 내부에서 실행)
+    distrobox-enter arch-dev -- bash -c "git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si --noconfirm && cd .. && rm -rf yay-bin"
+    
+    echo "✨ Initialization complete! You can now use 'dpm install <package>'."
+    exit 0
+fi
+
+if [ "$action" == "self-update" ]; then
+    echo "🔄 Updating dpm..."
+    sudo curl -fsSL https://raw.githubusercontent.com/username/dpm/main/dpm -o /usr/local/bin/dpm
+    sudo chmod +x /usr/local/bin/dpm
+    echo "✅ Updated to the latest version."
+    exit 0
+fi
+
+if [ "$action" == "install" ]; then
+    if [ -z "$package" ]; then
+        echo "❌ Error: Package name required for install."
+        exit 1
+    fi
+    CMD="yay -S $package --noconfirm"
+    LOG_MSG="📦 Installing package: $package"
+
+elif [ "$action" == "upgrade" ]; then
+    # 시스템 전체 업데이트 (Arch의 표준 방식: -Syu)
+    CMD="yay -Syu --noconfirm"
+    LOG_MSG="🔄 Upgrading entire system..."
+
+else
+    # 그 외 명령어(remove, search 등)는 스냅샷 없이 패스스루하거나 별도 처리
+    distrobox-enter "$CONTAINER_NAME" -- yay "$@"
+    exit 0
+fi
+
+# ---------------------------------------------------------
+# 스냅샷 및 실행 로직 (install과 upgrade 모두 적용)
+# ---------------------------------------------------------
+
+# 1. 스냅샷 생성
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+NEW_TAG="${BACKUP_REPO}:${TIMESTAMP}"
+
+echo "📸 Creating snapshot before changes: $NEW_TAG"
+podman commit "$CONTAINER_NAME" "$NEW_TAG" > /dev/null
+
+if [ $? -ne 0 ]; then
+    echo "❌ Snapshot failed. Aborting."
+    exit 1
+fi
+
+# 2. 오래된 스냅샷 정리
+cleanup_old_backups
+
+# 3. 실제 명령어 실행 (install 또는 upgrade)
+echo "$LOG_MSG"
+distrobox-enter "$CONTAINER_NAME" -- $CMD
+
+# 4. 결과 확인 및 롤백
+if [ $? -eq 0 ]; then
+    echo "✅ Success!"
+else
+    echo "⚠️ Operation failed!"
+    echo "🔄 Rolling back to snapshot ($NEW_TAG)..."
+    
+    distrobox-stop "$CONTAINER_NAME" --yes
+    distrobox-rm "$CONTAINER_NAME" --force
+    distrobox-create --name "$CONTAINER_NAME" --image "$NEW_TAG" --yes
+    
+    echo "✅ Rollback completed."
+fi
