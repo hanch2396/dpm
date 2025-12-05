@@ -32,7 +32,7 @@ if [ "$action" == "init" ]; then
     echo "🛠 Initializing dpm environment..."
     
     # 1. 아치 리눅스 컨테이너 생성
-    distrobox-create --name arch-dev --image archlinux:latest --yes
+    distrobox-create --name arch-dev --image docker.io/library/archlinux:latest --yes
     
     # 2. 필수 패키지 설치 (git, base-devel, yay 설치를 위한 준비)
     echo "📦 Setting up AUR helper (yay)..."
