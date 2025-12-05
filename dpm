@@ -19,7 +19,7 @@ cleanup_old_backups() {
     # 3. xargs -r podman image rm : 출력된 오래된 이미지들을 삭제 (목록이 없으면 실행 안 함)
     
     podman images --sort created --format "{{.Repository}}:{{.Tag}}" \
-    | grep "^${BACKUP_REPO}:" \
+    | grep "${BACKUP_REPO}:" \
     | tail -n +$((MAX_BACKUPS + 1)) \
     | xargs -r podman image rm
     
