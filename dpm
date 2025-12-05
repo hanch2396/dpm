@@ -111,15 +111,15 @@ EOF
     echo "📦 Setting up AUR helper (yay)..."
     distrobox-enter $CONTAINER_NAME -- bash -c "git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si --noconfirm && cd .. && rm -rf yay-bin"
     
-    # 초기 상태 커밋 및 전환
-    echo "💾 Saving initial state..."
-    INIT_TAG="${BACKUP_REPO}:init-$(date +%Y%m%d%H%M%S)"
-    podman commit "$CONTAINER_NAME" "$INIT_TAG" > /dev/null
+    # # 초기 상태 커밋 및 전환
+    # echo "💾 Saving initial state..."
+    # INIT_TAG="${BACKUP_REPO}:init-$(date +%Y%m%d%H%M%S)"
+    # podman commit "$CONTAINER_NAME" "$INIT_TAG" > /dev/null
     
-    echo "🔄 Switching container to initial backup layer..."
-    distrobox-stop "$CONTAINER_NAME" --yes
-    distrobox-rm "$CONTAINER_NAME" --force
-    distrobox-create --name "$CONTAINER_NAME" --image "$INIT_TAG" --yes
+    # echo "🔄 Switching container to initial backup layer..."
+    # distrobox-stop "$CONTAINER_NAME" --yes
+    # distrobox-rm "$CONTAINER_NAME" --force
+    # distrobox-create --name "$CONTAINER_NAME" --image "$INIT_TAG" --yes
 
     echo "✨ Initialization complete! You can now use 'dpm install <package>'."
     exit 0
@@ -209,14 +209,14 @@ fi
 
 # 1. [Safety] 실행 전, 현재 상태를 무조건 백업 (Rollback Point)
 #    이것이 '기존 이미지' 역할을 합니다.
-PRE_TAG="${BACKUP_REPO}:pre-$(date +%Y%m%d%H%M%S)"
-echo "💾 Creating safety snapshot (Pre-Execution): $PRE_TAG"
-podman commit "$CONTAINER_NAME" "$PRE_TAG" > /dev/null
+# PRE_TAG="${BACKUP_REPO}:pre-$(date +%Y%m%d%H%M%S)"
+# echo "💾 Creating safety snapshot (Pre-Execution): $PRE_TAG"
+# podman commit "$CONTAINER_NAME" "$PRE_TAG" > /dev/null
 
-if [ $? -ne 0 ]; then
-    echo "❌ Safety snapshot failed. Aborting to protect data."
-    exit 1
-fi
+# if [ $? -ne 0 ]; then
+#     echo "❌ Safety snapshot failed. Aborting to protect data."
+#     exit 1
+# fi
 
 # 2. 명령어 실행 (설치 시도)
 echo "$LOG_MSG"
@@ -231,14 +231,14 @@ if [ $EXIT_CODE -eq 0 ]; then
     echo "✅ Success!"
     
     # 현재(설치된) 상태를 '새로운 이미지'로 저장
-    POST_TAG="${BACKUP_REPO}:post-$(date +%Y%m%d%H%M%S)"
-    echo "💾 Committing new state: $POST_TAG"
-    podman commit "$CONTAINER_NAME" "$POST_TAG" > /dev/null
+    # POST_TAG="${BACKUP_REPO}:post-$(date +%Y%m%d%H%M%S)"
+    # echo "💾 Committing new state: $POST_TAG"
+    # podman commit "$CONTAINER_NAME" "$POST_TAG" > /dev/null
     
-    echo "🔄 Recreating container with NEW image (Incremental)..."
-    distrobox-stop "$CONTAINER_NAME" --yes
-    distrobox-rm "$CONTAINER_NAME" --force
-    distrobox-create --name "$CONTAINER_NAME" --image "$POST_TAG" --yes
+    # echo "🔄 Recreating container with NEW image (Incremental)..."
+    # distrobox-stop "$CONTAINER_NAME" --yes
+    # distrobox-rm "$CONTAINER_NAME" --force
+    # distrobox-create --name "$CONTAINER_NAME" --image "$POST_TAG" --yes
     
     # 성공했으므로 자동 Export 실행
     if [ "$action" == "install" ]; then
@@ -252,15 +252,15 @@ else
     # 실패 시: 기존 이미지로 후퇴 (Rollback)
     # ================================
     echo "⚠️  Operation failed!"
-    echo "🔄 Rolling back to safety snapshot ($PRE_TAG)..."
+    # echo "🔄 Rolling back to safety snapshot ($PRE_TAG)..."
     
-    distrobox-stop "$CONTAINER_NAME" --yes
-    distrobox-rm "$CONTAINER_NAME" --force
-    distrobox-create --name "$CONTAINER_NAME" --image "$PRE_TAG" --yes
+    # distrobox-stop "$CONTAINER_NAME" --yes
+    # distrobox-rm "$CONTAINER_NAME" --force
+    # distrobox-create --name "$CONTAINER_NAME" --image "$PRE_TAG" --yes
     
-    echo "✅ Rollback completed. System is clean."
+    # echo "✅ Rollback completed. System is clean."
     exit 1
 fi
 
 # 4. 마무리: 오래된 백업 태그 정리
-cleanup_old_backups
+# cleanup_old_backups
