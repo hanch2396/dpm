@@ -64,11 +64,11 @@ if [ "$action" == "init" ]; then
     
     # 2. 필수 패키지 설치
     echo "📦 Setting up base packages..."
-    distrobox-enter arch-dev -- sudo pacman -Syu --noconfirm base-devel git
+    distrobox-enter $CONTAINER_NAME -- sudo pacman -Syu --noconfirm base-devel git
     
     # [추가됨] 3. 로케일 자동 설정 (호스트 로케일 동기화)
     echo "🌍 Generating locales..."
-    distrobox-enter arch-dev -- sudo bash -c '
+    distrobox-enter $CONTAINER_NAME -- sudo bash -c '
         # 1. en_US.UTF-8은 기본으로 활성화
         sed -i "s/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/" /etc/locale.gen
         
@@ -85,7 +85,7 @@ if [ "$action" == "init" ]; then
 
     # 4. yay 설치
     echo "📦 Setting up AUR helper (yay)..."
-    distrobox-enter arch-dev -- bash -c "git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si --noconfirm && cd .. && rm -rf yay-bin"
+    distrobox-enter $CONTAINER_NAME -- bash -c "git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si --noconfirm && cd .. && rm -rf yay-bin"
     
     echo "✨ Initialization complete! You can now use 'dpm install <package>'."
     exit 0
