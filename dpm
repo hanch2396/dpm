@@ -155,7 +155,7 @@ elif [ "$action" == "remove" ]; then
     CMD="yay -Rns $* --noconfirm"
     LOG_MSG="🗑 Removing packages: $*"
 
-elif [ "$action" == "upgrade" ]; then
+elif [ "$action" == "update" ]; then
     # 시스템 전체 업데이트 (Arch의 표준 방식: -Syu)
     CMD="yay -Syu --noconfirm"
     LOG_MSG="🔄 Upgrading entire system..."
@@ -192,7 +192,7 @@ else
     # 알 수 없는 명령어 처리 (오타 방지)
     echo "❌ Unknown command: '$action'"
     echo "   Did you mean 'install'?"
-    echo "Usage: dpm [init|install|remove|upgrade|enter|export] ..."
+    echo "Usage: dpm [init|self-update|install|remove|update|enter|export] ..."
     exit 1
 fi
 
