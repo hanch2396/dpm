@@ -61,33 +61,36 @@ if [ "$action" == "init" ]; then
     # 1. 아치 리눅스 컨테이너 생성
     distrobox-create --name $CONTAINER_NAME --image docker.io/library/archlinux:latest --yes
     
-    # 2. 필수 패키지 설치
-    echo "📦 Setting up base packages..."
-    distrobox-enter $CONTAINER_NAME -- sudo pacman -Syu --noconfirm base-devel git
+    # 2. 시스템 설정 (로케일 생성 & Multilib 활성화)
+    echo "⚙️  Configuring system (Locale & Multilib)..."
     
-    # [추가됨] 3. 로케일 자동 설정 (호스트 로케일 동기화)
-    echo "🌍 Generating locales..."
-    distrobox-enter $CONTAINER_NAME -- sudo bash <<EOF
-        # 1. en_US.UTF-8은 기본으로 활성화
+    distrobox-enter arch-dev -- sudo bash <<EOF
+        # --- 1) 로케일 설정 ---
+        # en_US.UTF-8 기본 활성화
         sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
         
-        # 2. 호스트의 LANG 변수 가져오기 (이 부분은 호스트 셸이 채워줍니다)
+        # 호스트 언어 감지 및 활성화
         HOST_LANG="$LANG"
-        
         if [ -n "\$HOST_LANG" ]; then
             echo "   -> Detected host locale: \$HOST_LANG"
-            
-            # 점(.)을 이스케이프 처리 (예: ko_KR.UTF-8 -> ko_KR\.UTF-8)
-            # 내부 변수이므로 \$를 붙여서 호스트가 해석하지 못하게 합니다.
             CLEAN_LANG=\$(echo "\$HOST_LANG" | sed 's/\./\\\./')
-            
-            # sed 명령어로 주석 해제
             sed -i "s/^#\$CLEAN_LANG/\$CLEAN_LANG/" /etc/locale.gen
         fi
         
-        # 3. 로케일 생성 적용
+        # 로케일 적용
         locale-gen
+
+        # --- 2) Multilib 활성화 ---
+        echo "   -> Enabling multilib repository..."
+        # pacman.conf에서 [multilib] 섹션과 그 바로 아래 Include 라인의 주석(#) 제거
+        # sed 범위 지정(/start/,/end/)을 사용하여 두 줄을 동시에 처리
+        sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
 EOF
+
+    # 3. 시스템 업데이트 및 필수 패키지 설치
+    # Multilib이 활성화되었으므로 -Syu 실행 시 multilib DB도 함께 동기화됩니다.
+    echo "📦 Setting up base packages and updating..."
+    distrobox-enter arch-dev -- sudo pacman -Syu --noconfirm base-devel git
 
     # 4. yay 설치
     echo "📦 Setting up AUR helper (yay)..."
