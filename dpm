@@ -189,7 +189,7 @@ elif [ "$action" == "export" ]; then
     exit $?
 
 elif [ "$action" == "clean" ]; then
-    CMD="yay -Qdtq | yay -Rns --noconfirm - && yay -Scc --noconfirm"
+    CMD="yay -Qdtq | yay -Rns --noconfirm - 2> /dev/null ; yay -Scc --noconfirm"
     LOG_MSG="🧹 Cleaning system garbage (Orphans & Cache)..."
 
 else
@@ -224,7 +224,7 @@ fi
 
 # 2. 명령어 실행 (설치 시도)
 echo "$LOG_MSG"
-distrobox-enter "$CONTAINER_NAME" -- $CMD
+distrobox-enter "$CONTAINER_NAME" -- bash -c "$CMD"
 EXIT_CODE=$?
 
 # 3. 결과에 따른 분기 처리
