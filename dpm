@@ -79,12 +79,27 @@ if [ "$action" == "init" ]; then
 
         # --- 2) Multilib 활성화 ---
         echo "   -> Enabling multilib repository..."
-        sed -i "/\[multilib\]/,/Include/"'s/^#//' /etc/pacman.conf
+        
+        # pacman.conf에 [multilib]이라는 글자가 있는지 확인
+        if grep -q "^\[multilib\]" /etc/pacman.conf; then
+            echo "      Found existing section. Uncommenting..."
+            sed -i '/\[multilib\]/,/Include/s/^#//' /etc/pacman.conf
+        else
+            echo "      Section missing. Appending to file..."
+            # 파일 끝에 [multilib] 설정 추가
+            echo "" >> /etc/pacman.conf
+            echo "[multilib]" >> /etc/pacman.conf
+            echo "Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
+        fi
 
         # --- 3) 병렬 다운로드 활성화 (속도 향상) ---
         echo "   -> Setting ParallelDownloads to 10..."
-        # #ParallelDownloads = 5  <-- 이 줄을 찾아서 ParallelDownloads = 10 으로 변경
-        sed -i 's/^#ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
+        # ParallelDownloads = 5  <-- 이 줄을 찾아서 ParallelDownloads = 10 으로 변경
+        sed -i 's/^ParallelDownloads.*/ParallelDownloads = 10/' /etc/pacman.conf
+
+        # 설정이 잘 되었는지 확인용 (로그 출력)
+        echo "   -> Verifying pacman.conf changes:"
+        grep -E "^\[multilib\]|^ParallelDownloads" /etc/pacman.conf
 EOF
 
     # 3. 시스템 업데이트 및 필수 패키지 설치
