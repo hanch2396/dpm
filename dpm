@@ -28,6 +28,27 @@ cleanup_old_backups() {
     # 삭제된 이미지가 없다면 위 명령어가 조용히 넘어갑니다.
 }
 
+# ---------------------------------------------------------
+# 함수: 설치된 패키지에서 .desktop 파일을 찾아 자동 Export
+# ---------------------------------------------------------
+auto_export_apps() {
+    local pkg_name="$1"
+    echo "🔍 Checking for GUI applications in '$pkg_name'..."
+
+    # 컨테이너 내부에서 실행할 스크립트
+    # 1. pacman -Qlq: 패키지가 설치한 파일 목록 조회 (Quiet mode)
+    # 2. grep: .desktop 파일만 필터링 (/usr/share/applications/ 경로)
+    # 3. while read: 발견된 파일마다 distrobox-export 실행
+    
+    distrobox-enter "$CONTAINER_NAME" -- bash -c "
+        pacman -Qlq '$pkg_name' 2>/dev/null | grep -E '^/usr/share/applications/.*\.desktop$' | while read -r file; do
+            app_name=\$(basename \"\$file\" .desktop)
+            echo \"🚀 Auto-exporting: \$app_name\"
+            distrobox-export --app \"\$app_name\"
+        done
+    "
+}
+
 if [ "$action" == "init" ]; then
     echo "🛠 Initializing dpm environment..."
     
@@ -98,6 +119,11 @@ distrobox-enter "$CONTAINER_NAME" -- $CMD
 # 4. 결과 확인 및 롤백
 if [ $? -eq 0 ]; then
     echo "✅ Success!"
+
+    if [ "$action" == "install" ]; then
+        auto_export_apps "$package"
+    fi
+    
 else
     echo "⚠️ Operation failed!"
     echo "🔄 Rolling back to snapshot ($NEW_TAG)..."
