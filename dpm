@@ -112,6 +112,29 @@ elif [ "$action" == "upgrade" ]; then
     CMD="yay -Syu --noconfirm"
     LOG_MSG="🔄 Upgrading entire system..."
 
+elif [ "$action" == "enter" ]; then
+    # 사용법 1: dpm enter          (단순 셸 진입)
+    # 사용법 2: dpm enter [명령어] (컨테이너 안에서 특정 명령어 실행)
+    
+    # "enter"라는 첫 번째 인자는 처리했으므로 제거(shift)합니다.
+    # 이제 "$@"에는 enter 뒤에 오는 나머지 인자들만 남습니다.
+    shift 
+
+    if [ $# -eq 0 ]; then
+        # 추가 인자가 없으면 그냥 셸로 진입
+        echo "🚀 Entering interactive shell in '$CONTAINER_NAME'..."
+        echo "Type 'exit' to return to host."
+        distrobox-enter "$CONTAINER_NAME"
+    else
+        # 추가 인자가 있으면 해당 명령어를 컨테이너 안에서 실행
+        # -- (대시 두 개)는 distrobox 옵션과 실행할 명령어를 구분합니다.
+        echo "🚀 Executing in '$CONTAINER_NAME': $*"
+        distrobox-enter "$CONTAINER_NAME" -- "$@"
+    fi
+    
+    # 실행 후 종료 코드 전달
+    exit $?
+
 else
     # 그 외 명령어(remove, search 등)는 스냅샷 없이 패스스루하거나 별도 처리
     distrobox-enter "$CONTAINER_NAME" -- yay "$@"
