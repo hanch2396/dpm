@@ -196,7 +196,7 @@ else
     # 알 수 없는 명령어 처리 (오타 방지)
     echo "❌ Unknown command: '$action'"
     echo "   Did you mean 'install'?"
-    echo "Usage: dpm [init|self-update|install|remove|update|enter|export] ..."
+    echo "Usage: dpm [init|self-update|install|remove|update|enter|export|clean] ..."
     exit 1
 fi
 
