@@ -69,6 +69,8 @@ if [ "$action" == "init" ]; then
     
     # 1. 아치 리눅스 컨테이너 생성
     distrobox-create --name $CONTAINER_NAME --image docker.io/library/archlinux:latest --yes
+
+    distrobox-enter $CONTAINER_NAME # 초기 설정
     
     # 2. 시스템 설정 (로케일, Multilib, 병렬 다운로드)
     echo "⚙️  Configuring system..."
