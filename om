@@ -1,31 +1,12 @@
 #!/bin/bash
 
 # --- 설정 ---
-CONTAINER_NAME="om-arch"             # Distrobox 컨테이너 이름
-BACKUP_REPO="${CONTAINER_NAME}-backup" # 백업 이미지가 저장될 레포지토리 이름
-# MAX_BACKUPS=1                         # 유지할 최대 백업 개수
+CONTAINER_NAME="om-arch" # Distrobox 컨테이너 이름
 
 action=$1
 
 CMD=""
 LOG_MSG=""
-
-# 백업 정리 함수 (Rotation Logic)
-# cleanup_old_backups() {
-#     echo "🔍 Checking for old snapshots..."
-    
-#     # 1. 해당 레포지토리의 이미지들을 생성 최신순으로 나열
-#     # 2. tail -n +$((MAX_BACKUPS + 1)) : 상위 N개를 건너뛰고 그 이후(오래된 것들)만 출력
-#     # 3. xargs -r podman image rm : 출력된 오래된 이미지들을 삭제 (목록이 없으면 실행 안 함)
-    
-#     podman images --sort created --format "{{.Repository}}:{{.Tag}}" \
-#     | grep "${BACKUP_REPO}:" \
-#     | tail -n +$((MAX_BACKUPS + 1)) \
-#     | xargs -r podman image rm
-    
-#     # 삭제 작업 후 결과 메시지 (선택 사항)
-#     # 삭제된 이미지가 없다면 위 명령어가 조용히 넘어갑니다.
-# }
 
 # ---------------------------------------------------------
 # 함수: 설치된 패키지에서 .desktop 파일을 찾아 자동 Export
@@ -138,16 +119,6 @@ EOF
     # 4. yay 설치
     echo "📦 Setting up AUR helper (yay)..."
     distrobox-enter $CONTAINER_NAME -- bash -c "git clone https://aur.archlinux.org/yay-bin.git && cd yay-bin && makepkg -si --noconfirm && cd .. && rm -rf yay-bin"
-    
-    # # 초기 상태 커밋 및 전환
-    # echo "💾 Saving initial state..."
-    # INIT_TAG="${BACKUP_REPO}:init-$(date +%Y%m%d%H%M%S)"
-    # podman commit "$CONTAINER_NAME" "$INIT_TAG" > /dev/null
-    
-    # echo "🔄 Switching container to initial backup layer..."
-    # distrobox-stop "$CONTAINER_NAME" --yes
-    # distrobox-rm "$CONTAINER_NAME" --force
-    # distrobox-create --name "$CONTAINER_NAME" --image "$INIT_TAG" --yes
 
     echo "✨ Initialization complete! You can now use 'om install <package>'."
     exit 0
@@ -243,26 +214,15 @@ else
 fi
 
 # ---------------------------------------------------------
-# 실행 로직 (install, remove, upgrade만 여기로 옴)
+# 실행 로직
 # ---------------------------------------------------------
 
-# 0. 컨테이너 존재 확인 (안전을 위해)
+# 1. 컨테이너 존재 확인 (안전을 위해)
 if ! podman container exists "$CONTAINER_NAME"; then
     echo "❌ Container '$CONTAINER_NAME' not found."
     echo "   Please run 'om init' first."
     exit 1
 fi
-
-# 1. [Safety] 실행 전, 현재 상태를 무조건 백업 (Rollback Point)
-#    이것이 '기존 이미지' 역할을 합니다.
-# PRE_TAG="${BACKUP_REPO}:pre-$(date +%Y%m%d%H%M%S)"
-# echo "💾 Creating safety snapshot (Pre-Execution): $PRE_TAG"
-# podman commit "$CONTAINER_NAME" "$PRE_TAG" > /dev/null
-
-# if [ $? -ne 0 ]; then
-#     echo "❌ Safety snapshot failed. Aborting to protect data."
-#     exit 1
-# fi
 
 # 2. 명령어 실행 (설치 시도)
 echo "$LOG_MSG"
@@ -271,20 +231,7 @@ EXIT_CODE=$?
 
 # 3. 결과에 따른 분기 처리
 if [ $EXIT_CODE -eq 0 ]; then
-    # ================================
-    # 성공 시: 새로운 상태로 전진 (Forward)
-    # ================================
     echo "✅ Success!"
-    
-    # 현재(설치된) 상태를 '새로운 이미지'로 저장
-    # POST_TAG="${BACKUP_REPO}:post-$(date +%Y%m%d%H%M%S)"
-    # echo "💾 Committing new state: $POST_TAG"
-    # podman commit "$CONTAINER_NAME" "$POST_TAG" > /dev/null
-    
-    # echo "🔄 Recreating container with NEW image (Incremental)..."
-    # distrobox-stop "$CONTAINER_NAME" --yes
-    # distrobox-rm "$CONTAINER_NAME" --force
-    # distrobox-create --name "$CONTAINER_NAME" --image "$POST_TAG" --yes
     
     # 성공했으므로 자동 Export 실행
     if [ "$action" == "install" ]; then
@@ -294,23 +241,11 @@ if [ $EXIT_CODE -eq 0 ]; then
     fi
 
 else
-    # ================================
-    # 실패 시: 기존 이미지로 후퇴 (Rollback)
-    # ================================
     echo "⚠️  Operation failed!"
 
     if [ "$action" == "clean" ]; then
         echo "✨ Likely cause: No orphan packages found. Your system is already clean!"
     fi
-    # echo "🔄 Rolling back to safety snapshot ($PRE_TAG)..."
-    
-    # distrobox-stop "$CONTAINER_NAME" --yes
-    # distrobox-rm "$CONTAINER_NAME" --force
-    # distrobox-create --name "$CONTAINER_NAME" --image "$PRE_TAG" --yes
-    
-    # echo "✅ Rollback completed. System is clean."
+
     exit 1
 fi
-
-# 4. 마무리: 오래된 백업 태그 정리
-# cleanup_old_backups
