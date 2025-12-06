@@ -20,16 +20,16 @@ install_dependencies() {
         . /etc/os-release
         case $ID in
             ubuntu|debian)
-                sudo apt update && sudo apt install -y podman distrobox
+                sudo apt update && sudo apt install -y podman
                 ;;
             fedora)
-                sudo dnf install -y podman distrobox
+                sudo dnf install -y podman
                 ;;
             arch|manjaro)
-                sudo pacman -S --noconfirm podman distrobox
+                sudo pacman -S --noconfirm podman
                 ;;
             *)
-                echo "⚠️  Unsupported OS. Please install 'podman' and 'distrobox' manually."
+                echo "⚠️  Unsupported OS. Please install 'podman' manually."
                 exit 1
                 ;;
         esac
@@ -37,21 +37,58 @@ install_dependencies() {
 }
 
 # 메인 로직
-if ! check_dependency "podman" || ! check_dependency "distrobox"; then
+if ! check_dependency "podman"; then
     read -p "Dependencies are missing. Install them now? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         install_dependencies
     else
-        echo "Please install podman and distrobox manually."
+        echo "Please install podman manually."
         exit 1
     fi
 fi
 
+echo "📥 Installing distrobox"
+curl -s https://raw.githubusercontent.com/89luca89/distrobox/main/install | sh -s -- --prefix ~/.local
+
 # 3. dpm 스크립트 설치
-echo "📥 Installing dpm to /usr/local/bin..."
-sudo curl -fsSL https://raw.githubusercontent.com/hanch2396/dpm/main/dpm -o /usr/local/bin/dpm
-sudo chmod +x /usr/local/bin/dpm
+echo "📥 Installing dpm to ${HOME}/.local/bin..."
+mkdir -p ${HOME}/.local/bin  # 폴더가 없을 경우 대비
+curl -fsSL https://raw.githubusercontent.com/hanch2396/dpm/main/dpm -o ${HOME}/.local/bin/dpm
+chmod +x ${HOME}/.local/bin/dpm
+
+# --- PATH 추가 로직 시작 ---
+echo "🔧 Configuring PATH..."
+export PATH="$HOME/.local/bin:$PATH"  # 현재 스크립트 세션에 PATH 적용
+
+# 사용하는 쉘 설정 파일 감지 및 영구 등록
+SHELL_CONFIG=""
+case "$SHELL" in
+  */zsh) SHELL_CONFIG="$HOME/.zshrc" ;;
+  */bash) SHELL_CONFIG="$HOME/.bashrc" ;;
+  *) 
+    if [ -f "$HOME/.bashrc" ]; then
+        SHELL_CONFIG="$HOME/.bashrc"
+    elif [ -f "$HOME/.zshrc" ]; then
+        SHELL_CONFIG="$HOME/.zshrc"
+    fi
+    ;;
+esac
+
+if [ -n "$SHELL_CONFIG" ]; then
+    # 파일 내에 이미 PATH 설정이 있는지 확인 후 없으면 추가
+    if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_CONFIG"; then
+        echo '' >> "$SHELL_CONFIG"
+        echo '# Add local bin to PATH' >> "$SHELL_CONFIG"
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
+        echo "✅ Added ~/.local/bin to $SHELL_CONFIG"
+    else
+        echo "✅ PATH is already configured in $SHELL_CONFIG"
+    fi
+else
+    echo "⚠️  Could not detect shell config file. Please add ~/.local/bin to your PATH manually."
+fi
+# --- PATH 추가 로직 끝 ---
 
 # 4. 초기화 안내
 echo "🎉 Installation complete!"
