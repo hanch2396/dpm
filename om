@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # --- 설정 ---
-CONTAINER_NAME="dpm-arch"             # Distrobox 컨테이너 이름
+CONTAINER_NAME="om-arch"             # Distrobox 컨테이너 이름
 BACKUP_REPO="${CONTAINER_NAME}-backup" # 백업 이미지가 저장될 레포지토리 이름
-MAX_BACKUPS=1                         # 유지할 최대 백업 개수
+# MAX_BACKUPS=1                         # 유지할 최대 백업 개수
 
 action=$1
 
@@ -11,21 +11,21 @@ CMD=""
 LOG_MSG=""
 
 # 백업 정리 함수 (Rotation Logic)
-cleanup_old_backups() {
-    echo "🔍 Checking for old snapshots..."
+# cleanup_old_backups() {
+#     echo "🔍 Checking for old snapshots..."
     
-    # 1. 해당 레포지토리의 이미지들을 생성 최신순으로 나열
-    # 2. tail -n +$((MAX_BACKUPS + 1)) : 상위 N개를 건너뛰고 그 이후(오래된 것들)만 출력
-    # 3. xargs -r podman image rm : 출력된 오래된 이미지들을 삭제 (목록이 없으면 실행 안 함)
+#     # 1. 해당 레포지토리의 이미지들을 생성 최신순으로 나열
+#     # 2. tail -n +$((MAX_BACKUPS + 1)) : 상위 N개를 건너뛰고 그 이후(오래된 것들)만 출력
+#     # 3. xargs -r podman image rm : 출력된 오래된 이미지들을 삭제 (목록이 없으면 실행 안 함)
     
-    podman images --sort created --format "{{.Repository}}:{{.Tag}}" \
-    | grep "${BACKUP_REPO}:" \
-    | tail -n +$((MAX_BACKUPS + 1)) \
-    | xargs -r podman image rm
+#     podman images --sort created --format "{{.Repository}}:{{.Tag}}" \
+#     | grep "${BACKUP_REPO}:" \
+#     | tail -n +$((MAX_BACKUPS + 1)) \
+#     | xargs -r podman image rm
     
-    # 삭제 작업 후 결과 메시지 (선택 사항)
-    # 삭제된 이미지가 없다면 위 명령어가 조용히 넘어갑니다.
-}
+#     # 삭제 작업 후 결과 메시지 (선택 사항)
+#     # 삭제된 이미지가 없다면 위 명령어가 조용히 넘어갑니다.
+# }
 
 # ---------------------------------------------------------
 # 함수: 설치된 패키지에서 .desktop 파일을 찾아 자동 Export
@@ -84,7 +84,7 @@ EOF
 }
 
 if [ "$action" == "init" ]; then
-    echo "🛠 Initializing dpm environment..."
+    echo "🛠 Initializing om environment..."
     
     # 1. 아치 리눅스 컨테이너 생성
     distrobox-create --name $CONTAINER_NAME --image docker.io/library/archlinux:latest --yes
@@ -149,14 +149,14 @@ EOF
     # distrobox-rm "$CONTAINER_NAME" --force
     # distrobox-create --name "$CONTAINER_NAME" --image "$INIT_TAG" --yes
 
-    echo "✨ Initialization complete! You can now use 'dpm install <package>'."
+    echo "✨ Initialization complete! You can now use 'om install <package>'."
     exit 0
 fi
 
 if [ "$action" == "self-update" ]; then
-    echo "🔄 Updating dpm..."
-    curl -fsSL https://raw.githubusercontent.com/hanch2396/dpm/main/dpm -o ${HOME}/.local/bin/dpm
-    chmod +x ${HOME}/.local/bin/dpm
+    echo "🔄 Updating om..."
+    curl -fsSL https://raw.githubusercontent.com/hanch2396/dpm/main/dpm -o ${HOME}/.local/bin/om
+    chmod +x ${HOME}/.local/bin/om
     echo "✅ Updated to the latest version."
     exit 0
 fi
@@ -238,7 +238,7 @@ else
     # 알 수 없는 명령어 처리 (오타 방지)
     echo "❌ Unknown command: '$action'"
     echo "   Did you mean 'install'?"
-    echo "Usage: dpm [init|self-update|install|remove|update|enter|export|unexport|clean] ..."
+    echo "Usage: om [init|self-update|install|remove|update|enter|export|unexport|clean] ..."
     exit 1
 fi
 
@@ -249,7 +249,7 @@ fi
 # 0. 컨테이너 존재 확인 (안전을 위해)
 if ! podman container exists "$CONTAINER_NAME"; then
     echo "❌ Container '$CONTAINER_NAME' not found."
-    echo "   Please run 'dpm init' first."
+    echo "   Please run 'om init' first."
     exit 1
 fi
 

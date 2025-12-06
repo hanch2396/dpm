@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 dpm (Distrobox Package Manager) Installer"
+echo "🚀 om (Omni Package Manager) Installer"
 
 # 1. 의존성 확인 함수
 check_dependency() {
@@ -52,10 +52,10 @@ echo "📥 Installing distrobox"
 curl -s https://raw.githubusercontent.com/89luca89/distrobox/main/install | sh -s -- --prefix ~/.local
 
 # 3. dpm 스크립트 설치
-echo "📥 Installing dpm to ${HOME}/.local/bin..."
+echo "📥 Installing om to ${HOME}/.local/bin..."
 mkdir -p ${HOME}/.local/bin  # 폴더가 없을 경우 대비
-curl -fsSL https://raw.githubusercontent.com/hanch2396/dpm/main/dpm -o ${HOME}/.local/bin/dpm
-chmod +x ${HOME}/.local/bin/dpm
+curl -fsSL https://raw.githubusercontent.com/hanch2396/dpm/main/om -o ${HOME}/.local/bin/om
+chmod +x ${HOME}/.local/bin/om
 
 # --- PATH 추가 로직 시작 ---
 echo "🔧 Configuring PATH..."
@@ -92,5 +92,5 @@ fi
 
 # 4. 초기화 안내
 echo "🎉 Installation complete!"
-echo "Running 'dpm init'"
-dpm init
+echo "Running 'om init'"
+om init

@@ -1,4 +1,4 @@
-# Distrobox Package Manager (DPM)
+# Omni Package Manager
 
 ## How to install
 
