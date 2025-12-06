@@ -47,9 +47,9 @@ auto_export_apps() {
         pacman -Qlq "\$TARGET" 2>/dev/null | grep -E '^/usr/share/applications/.*\.desktop$' | while read -r file; do
             # 파일이 실제로 존재하는지 확인
             if [ -f "\$file" ]; then
-                app=\$(basename "\$file" .desktop)
-                echo "🚀 Auto-exporting: \$app"
-                distrobox-export --app "\$app"
+                # app=\$(basename "\$file" .desktop)
+                echo "🚀 Auto-exporting: \$file"
+                distrobox-export --app "\$file"
             fi
         done
 EOF
